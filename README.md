@@ -1,6 +1,6 @@
 # SCRIPTS
 
-Repositorio de scrpits y consultas SQL utilizados en el trabajo diario.
+Repositorio de scripts y consultas SQL utilizados en el trabajo diario.
 
 ## Contenido
 
