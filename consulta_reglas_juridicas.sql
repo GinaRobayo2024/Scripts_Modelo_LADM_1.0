@@ -1,5 +1,5 @@
 -- SUPER CONSULTA: Reglas de consistencia juridicas 2.1 a 2.41 (LADM_COL 1.0)
--- Esquema real de la base: o_70523_00_01_20250627_l3_h5_r3
+-- Esquema real de la base: [esquema]
 --
 -- Convencion de marca por regla (columnas r2_1 .. r2_41):
 --   0    = la regla APLICA a esta fila y SE CUMPLE
@@ -31,18 +31,18 @@ with tb1 as (
         ci.ilicode as ci_ilicode,
         cd.ilicode as cd_ilicode,
         gt.ilicode as tipo_agrupacion
-    from o_70523_00_01_20250627_l3_h5_r3.col_rrrinteresado cr
-    inner join o_70523_00_01_20250627_l3_h5_r3.col_miembros cm
+    from [esquema].col_rrrinteresado cr
+    inner join [esquema].col_miembros cm
         on cm.agrupacion = cr.interesado_cr_agrupacioninteresados
-    inner join o_70523_00_01_20250627_l3_h5_r3.ilc_interesado ii
+    inner join [esquema].ilc_interesado ii
         on ii.t_id = cm.interesado_ilc_interesado
-    inner join o_70523_00_01_20250627_l3_h5_r3.cr_documentotipo cd
+    inner join [esquema].cr_documentotipo cd
         on cd.t_id = ii.tipo_documento
-    inner join o_70523_00_01_20250627_l3_h5_r3.cr_interesadotipo ci
+    inner join [esquema].cr_interesadotipo ci
         on ci.t_id = ii.tipo
-    inner join o_70523_00_01_20250627_l3_h5_r3.cr_agrupacioninteresados ag
+    inner join [esquema].cr_agrupacioninteresados ag
         on ag.t_id = cm.agrupacion
-    left join o_70523_00_01_20250627_l3_h5_r3.col_grupointeresadotipo gt
+    left join [esquema].col_grupointeresadotipo gt
         on gt.t_id = ag.tipo
     UNION
     select
@@ -52,16 +52,16 @@ with tb1 as (
         ci.ilicode as ci_ilicode,
         cd.ilicode as cd_ilicode,
         null as tipo_agrupacion
-    from o_70523_00_01_20250627_l3_h5_r3.col_rrrinteresado cr
-    inner join o_70523_00_01_20250627_l3_h5_r3.ilc_interesado ii
+    from [esquema].col_rrrinteresado cr
+    inner join [esquema].ilc_interesado ii
         on ii.t_id = cr.interesado_ilc_interesado
-    inner join o_70523_00_01_20250627_l3_h5_r3.cr_documentotipo cd
+    inner join [esquema].cr_documentotipo cd
         on cd.t_id = ii.tipo_documento
-    inner join o_70523_00_01_20250627_l3_h5_r3.cr_interesadotipo ci
+    inner join [esquema].cr_interesadotipo ci
         on ci.t_id = ii.tipo
     where not exists (
         select 1
-        from o_70523_00_01_20250627_l3_h5_r3.col_rrrinteresado cr2
+        from [esquema].col_rrrinteresado cr2
         where cr2.rrr = cr.rrr
           and cr2.interesado_cr_agrupacioninteresados is not null
     )
@@ -74,7 +74,7 @@ validacion_agrupacion as (
 participacion_agrupacion as (
     select agrupacion, sum(participacion) as suma_participacion,
            count(*) as total_miembros, count(participacion) as miembros_con_participacion
-    from o_70523_00_01_20250627_l3_h5_r3.col_miembros
+    from [esquema].col_miembros
     group by agrupacion
 ),
 tipos_por_agrupacion as (
@@ -82,10 +82,10 @@ tipos_por_agrupacion as (
         cm.agrupacion,
         bool_or(ci.ilicode = 'Persona_Natural') as tiene_natural,
         bool_or(ci.ilicode = 'Persona_Juridica') as tiene_juridica
-    from o_70523_00_01_20250627_l3_h5_r3.col_miembros cm
-    inner join o_70523_00_01_20250627_l3_h5_r3.ilc_interesado ii
+    from [esquema].col_miembros cm
+    inner join [esquema].ilc_interesado ii
         on ii.t_id = cm.interesado_ilc_interesado
-    inner join o_70523_00_01_20250627_l3_h5_r3.cr_interesadotipo ci
+    inner join [esquema].cr_interesadotipo ci
         on ci.t_id = ii.tipo
     group by cm.agrupacion
 ),
@@ -99,9 +99,9 @@ interesados_por_predio as (
             ),
             '; '
         ) as interesados_concat
-    from o_70523_00_01_20250627_l3_h5_r3.ilc_derecho pd
+    from [esquema].ilc_derecho pd
     left join tb1 on tb1.rrr = pd.t_id
-    left join o_70523_00_01_20250627_l3_h5_r3.ilc_interesado ii2
+    left join [esquema].ilc_interesado ii2
         on ii2.t_id = tb1.interesado_ilc_interesado
     group by pd.unidad
 ),
@@ -109,10 +109,10 @@ novedades_por_predio as (
     select
         dalc.ilc_predio as predio_t_id,
         string_agg(distinct tn.ilicode, '; ' order by tn.ilicode) as novedades
-    from o_70523_00_01_20250627_l3_h5_r3.ilc_datosadicionaleslevantamientocatastral dalc
-    inner join o_70523_00_01_20250627_l3_h5_r3.ilc_estructuranovedadnumeropredial enp
+    from [esquema].ilc_datosadicionaleslevantamientocatastral dalc
+    inner join [esquema].ilc_estructuranovedadnumeropredial enp
         on enp.ilc_dtsdcnltmntctstral_novedad_numeros_prediales = dalc.t_id
-    inner join o_70523_00_01_20250627_l3_h5_r3.ilc_estructuranovedadnumeropredial_tipo_novedad tn
+    inner join [esquema].ilc_estructuranovedadnumeropredial_tipo_novedad tn
         on tn.t_id = enp.tipo_novedad
     group by dalc.ilc_predio
 ),
@@ -145,24 +145,24 @@ tb2 as (
                 then (substring(pc.numero_predial_nacional, 6, 2) = '00')
             else null
         end as zona_rural
-    from o_70523_00_01_20250627_l3_h5_r3.ilc_predio pc
-    left join o_70523_00_01_20250627_l3_h5_r3.ilc_derecho pd
+    from [esquema].ilc_predio pc
+    left join [esquema].ilc_derecho pd
         on pd.unidad = pc.t_id
-    left join o_70523_00_01_20250627_l3_h5_r3.ilc_derechocatastraltipo id
+    left join [esquema].ilc_derechocatastraltipo id
         on id.t_id = pd.tipo
-    left join o_70523_00_01_20250627_l3_h5_r3.col_rrrfuente cr
+    left join [esquema].col_rrrfuente cr
         on cr.rrr = pd.t_id
-    left join o_70523_00_01_20250627_l3_h5_r3.ilc_fuenteadministrativa fa
+    left join [esquema].ilc_fuenteadministrativa fa
         on fa.t_id = cr.fuente_administrativa
-    left join o_70523_00_01_20250627_l3_h5_r3.col_fuenteadministrativatipo cf
+    left join [esquema].col_fuenteadministrativatipo cf
         on fa.tipo = cf.t_id
-    left join o_70523_00_01_20250627_l3_h5_r3.ilc_prediotipo ip
+    left join [esquema].ilc_prediotipo ip
         on ip.t_id = pc.tipo
-    left join o_70523_00_01_20250627_l3_h5_r3.ilc_condicionprediotipo cp
+    left join [esquema].ilc_condicionprediotipo cp
         on cp.t_id = pc.condicion_predio
-    left join o_70523_00_01_20250627_l3_h5_r3.ilc_datosadicionaleslevantamientocatastral dalc
+    left join [esquema].ilc_datosadicionaleslevantamientocatastral dalc
         on dalc.ilc_predio = pc.t_id
-    left join o_70523_00_01_20250627_l3_h5_r3.ilc_predio_informalidad pi
+    left join [esquema].ilc_predio_informalidad pi
         on pi.igc_predio_informal = pc.t_id
     left join interesados_por_predio ipf
         on ipf.predio_t_id = pi.igc_predio_formal
@@ -198,13 +198,13 @@ calc as (
         (tb2.tipo_de_predio ilike 'Predio.Privado.%') as es_privado
     from tb2
     left join tb1 on tb1.rrr = tb2.derecho_t_id
-    left join o_70523_00_01_20250627_l3_h5_r3.ilc_interesado ii
+    left join [esquema].ilc_interesado ii
         on ii.t_id = tb1.interesado_ilc_interesado
-    left join o_70523_00_01_20250627_l3_h5_r3.cr_sexotipo cs
+    left join [esquema].cr_sexotipo cs
         on cs.t_id = ii.sexo
-    left join o_70523_00_01_20250627_l3_h5_r3.ilc_autorreconocimientoetnicotipo ge
+    left join [esquema].ilc_autorreconocimientoetnicotipo ge
         on ge.t_id = ii.grupo_etnico
-    left join o_70523_00_01_20250627_l3_h5_r3.ilc_identificacionetnica ie
+    left join [esquema].ilc_identificacionetnica ie
         on ie.lc_identificacionetnica = ii.t_id
     left join validacion_agrupacion va on va.rrr = tb2.derecho_t_id
     left join participacion_agrupacion pa on pa.agrupacion = tb1.agrupacion_id
