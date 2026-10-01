@@ -219,7 +219,9 @@ select
     tipo_agrupacion,                 -- U
     total_interesados,               -- V
     total_agrupados,                 -- W
-    suma_participacion_agrupacion    -- X (columna Y en tu Excel)
+    suma_participacion_agrupacion,   -- X (columna Y en tu Excel)
+    cantidad_fuentes,                -- fuentes del derecho (antes duplicaban filas)
+    cantidad_predios_formales        -- predios formales de la mejora (antes duplicaban filas)
 
 from calc
 )
