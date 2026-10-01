@@ -81,6 +81,36 @@ interesados_por_predio as (
         on ii2.t_id = tb1.interesado_ilc_interesado
     group by pd.unidad
 ),
+-- Fuentes agrupadas por derecho: en el cargue cada interesado trae su propia copia de la
+-- fuente (misma escritura, mismo numero y fecha), por eso un derecho con N interesados
+-- tiene N fuentes. Si se unen sin agrupar, cada interesado se repite N veces.
+fuentes_por_derecho as (
+    select
+        crf.rrr as derecho_t_id,
+        count(distinct fa.t_id) as cantidad_fuentes,
+        string_agg(distinct cf.ilicode, ' | ') as fuente_ilicode,
+        string_agg(distinct fa.ente_emisor, ' | ') as ente_emisor,
+        string_agg(distinct fa.numero_fuente, ' | ') as numero_fuente,
+        string_agg(distinct fa.fecha_documento_fuente::text, ' | ') as fecha_documento_fuente
+    from [esquema].col_rrrfuente crf
+    inner join [esquema].ilc_fuenteadministrativa fa
+        on fa.t_id = crf.fuente_administrativa
+    left join [esquema].col_fuenteadministrativatipo cf
+        on cf.t_id = fa.tipo
+    group by crf.rrr
+),
+-- Informalidad agrupada por predio informal: una mejora puede estar sobre DOS o mas
+-- predios formales; sin agrupar, cada interesado de la mejora sale repetido.
+informalidad_por_predio as (
+    select
+        pi.igc_predio_informal as predio_t_id,
+        count(distinct pi.igc_predio_formal) as cantidad_predios_formales,
+        string_agg(distinct ipf.interesados_concat, ' | ') as interesado_predio_formal
+    from [esquema].ilc_predio_informalidad pi
+    left join interesados_por_predio ipf
+        on ipf.predio_t_id = pi.igc_predio_formal
+    group by pi.igc_predio_informal
+),
 tb2 as (
     select
         pc.t_id as predio_t_id,
@@ -89,16 +119,17 @@ tb2 as (
         pc.matricula_inmobiliaria as fmi,
         id.ilicode as derecho_tipo,
         cp.ilicode as condicion_predio,
-        fa.tipo as fuente_tipo_id,
-        cf.ilicode as fuente_ilicode,
-        fa.ente_emisor,
-        fa.numero_fuente,
-        fa.fecha_documento_fuente,
+        fd.fuente_ilicode,
+        fd.ente_emisor,
+        fd.numero_fuente,
+        fd.fecha_documento_fuente,
+        fd.cantidad_fuentes,
         pd.t_id as derecho_t_id,
         pd.fecha_inicio_tenencia,
         dalc.fecha_visita_predial,
-        case when pi.igc_predio_formal is not null then 'INFORMAL' end as condicion_informalidad_registro,
-        ipf.interesados_concat as interesado_predio_formal,
+        case when inf.predio_t_id is not null then 'INFORMAL' end as condicion_informalidad_registro,
+        inf.cantidad_predios_formales,
+        inf.interesado_predio_formal,
         case
             when length(pc.numero_predial_nacional) >= 22
                 then (substring(pc.numero_predial_nacional, 22, 1) <> '2')
@@ -114,22 +145,22 @@ tb2 as (
         on pd.unidad = pc.t_id
     left join [esquema].ilc_derechocatastraltipo id
         on id.t_id = pd.tipo
-    left join [esquema].col_rrrfuente cr
-        on cr.rrr = pd.t_id
-    left join [esquema].ilc_fuenteadministrativa fa
-        on fa.t_id = cr.fuente_administrativa
-    left join [esquema].col_fuenteadministrativatipo cf
-        on fa.tipo = cf.t_id
+    left join fuentes_por_derecho fd
+        on fd.derecho_t_id = pd.t_id
     left join [esquema].ilc_prediotipo ip
         on ip.t_id = pc.tipo
     left join [esquema].ilc_condicionprediotipo cp
         on cp.t_id = pc.condicion_predio
-    left join [esquema].ilc_datosadicionaleslevantamientocatastral dalc
+    -- una sola fila de visita por predio (la mas reciente): si el predio tiene varios
+    -- registros de datos adicionales, antes se duplicaban todos sus interesados
+    left join (
+        select ilc_predio, max(fecha_visita_predial) as fecha_visita_predial
+        from [esquema].ilc_datosadicionaleslevantamientocatastral
+        group by ilc_predio
+    ) dalc
         on dalc.ilc_predio = pc.t_id
-    left join [esquema].ilc_predio_informalidad pi
-        on pi.igc_predio_informal = pc.t_id
-    left join interesados_por_predio ipf
-        on ipf.predio_t_id = pi.igc_predio_formal
+    left join informalidad_por_predio inf
+        on inf.predio_t_id = pc.t_id
 ),
 calc as (
     select
@@ -195,7 +226,7 @@ from calc
 -- ============================================================================
 -- FILTRO: descomenta (quita el -- del inicio) UNA o varias de las lineas de abajo
 -- para simular un filtro de Excel. Deja las demas comentadas. Si no descomentas
--- nada, ves todo el detalle (5645 filas), igual que la hoja CONSULTA_MAESTRA.
+-- nada, ves todo el detalle: una fila por predio + interesado.
 -- ============================================================================
 select *
 from resultado
